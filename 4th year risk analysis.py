@@ -8,10 +8,8 @@ import os
 import csv
 from fpdf import FPDF
 
-# Configure Streamlit page
 st.set_page_config(page_title="4th Year Risk Analyser", page_icon="🎓")
 
-# Sidebar Navigation
 menu = st.sidebar.selectbox(
     "Choose App Section",
     ["4th Year Analyzer", "View Data Analytics"]
@@ -22,7 +20,7 @@ if menu == "4th Year Analyzer":
     st.title("🎓 4th Year Risk Analyser")
     st.write("""
     This tool helps you evaluate whether you should proceed with your 4th academic year under the NEP.
-
+    
     Based on your academic profile, career goals, and personal circumstances, we'll analyse:
     - **Benefits** of doing 4th year
     - **Risks** of doing 4th year
@@ -46,8 +44,6 @@ if menu == "4th Year Analyzer":
     submitted = st.button("Analyse My 4th Year Risk")
 
     if submitted:
-
-        # Scoring logic
         score = 0
         positive_factors = []
         risk_factors = []
@@ -55,35 +51,27 @@ if menu == "4th Year Analyzer":
         if goal_abroad == "Yes":
             score -= 3
             positive_factors.append("Studying abroad after graduation")
-
         if research_interest == "Yes":
             score -= 2
             positive_factors.append("Interest in pursuing research further")
-
         if placement_interest == "Yes":
             score -= 2
             positive_factors.append("Wish to sit for placements in 4th year")
-
         if competitive_exam == "Yes":
             score -= 2
             positive_factors.append("Intends to use 4th year for preparation of competitive exams")
-
         if internship_experience == "No":
             score -= 1
             positive_factors.append("No internship experience yet so an extra year could help")
-
         if financial_stability == "No":
             score += 3
             risk_factors.append("Financial instability to support an additional year")
-
         if solid_job_offer == "Yes":
             score += 3
             risk_factors.append("Already have a strong job offer from 3rd year placements")
-
         if burnout == "Yes":
             score += 2
             risk_factors.append("Feeling burnt out or uninterested in continuing academics")
-
         if no_clear_plan == "Yes":
             score += 3
             risk_factors.append("No clear plan for 4th year and might stay just to avoid a gap")
@@ -108,13 +96,11 @@ if menu == "4th Year Analyzer":
             st.write("**Benefits of doing 4th year ✅**")
             for factor in positive_factors:
                 st.write(f"- {factor}")
-
         if risk_factors:
             st.write("**Risks of doing 4th year ❌**")
             for factor in risk_factors:
                 st.write(f"- {factor}")
 
-        # Pie chart
         labels = ['Benefits', 'Risks']
         values = [len(positive_factors), len(risk_factors)]
         colors = ['#4CAF50', '#F44336']
@@ -125,10 +111,7 @@ if menu == "4th Year Analyzer":
             ax.axis('equal')
             ax.set_title("Your 4th Year Decision Profile")
             st.pyplot(fig)
-        else:
-            st.write("No benefits or risks identified based on your inputs. Please review your responses.")
 
-        # Save to CSV
         user_data = pd.DataFrame({
             "Timestamp": [datetime.now().strftime("%Y-%m-%d %H:%M:%S")],
             "Name": [user_name],
@@ -161,11 +144,9 @@ if menu == "4th Year Analyzer":
         else:
             st.success("✅ Your responses have been saved successfully!")
 
-        # PDF Report
         pdf = FPDF()
         pdf.add_page()
         pdf.set_font("Arial", size=12)
-
         pdf.cell(200, 10, txt=f"4th Year Risk Analysis Report for {name}", ln=True, align='C')
         pdf.ln(10)
         pdf.multi_cell(0, 10, txt=f"Final Score: {score}\n")
@@ -181,9 +162,7 @@ if menu == "4th Year Analyzer":
 
         pdf.multi_cell(0, 10, txt=f"Recommendation: {recommendation}")
 
-        # Convert PDF to bytes
         pdf_bytes = pdf.output(dest="S").encode("latin1")
-
         st.download_button(
             "📅 Download PDF Report",
             data=pdf_bytes,
@@ -194,72 +173,37 @@ if menu == "4th Year Analyzer":
 elif menu == "View Data Analytics":
     st.title("📊 Data Analytics Dashboard")
 
-    file_exists = os.path.exists("user_responses.csv")
-
-    if file_exists:
+    if not os.path.exists("user_responses.csv"):
+        st.warning("No data available yet. Complete at least one analysis first.")
+    else:
         try:
-            df = pd.read_csv(
-                "user_responses.csv",
-                quoting=csv.QUOTE_ALL,
-                encoding='utf-8',
-                on_bad_lines='skip'
-            )
-        except pd.errors.ParserError as e:
-            st.error(f"CSV parsing error: {e}")
+            df = pd.read_csv("user_responses.csv", quoting=csv.QUOTE_ALL, encoding='utf-8', on_bad_lines='skip')
+            df["GPA"] = pd.to_numeric(df["GPA"], errors="coerce")
+            df = df.dropna(subset=["GPA"])
+        except Exception as e:
+            st.error(f"Error reading data: {e}")
             df = pd.DataFrame()
-    else:
-        df = pd.DataFrame()
 
-    # Load sample data if no real data exists
-    if df.empty or len(df) < 3:
-        st.warning("⚠️ Not enough data yet. Showing sample data for demonstration!")
-        df = pd.DataFrame({
-            "GPA": [2.0, 3.5, 4.0, 4.8, 5.5, 6.3, 7.5, 8.2, 8.5, 9.0],
-            "Goal Abroad": ["Yes", "No", "No", "Yes", "No", "No", "Yes", "Yes", "No", "Yes"],
-            "Risk Factors": [
-                "Financial instability",
-                "No internship experience yet so an extra year could help",
-                "",
-                "Already have a strong job offer from 3rd year placements",
-                "",
-                "",
-                "Feeling burnt out or uninterested in continuing academics",
-                "",
-                "",
-                ""
-            ]
-        })
+        if df.empty:
+            st.warning("CSV file is empty or invalid.")
+        else:
+            st.write("#### GPA Distribution")
+            fig1, ax1 = plt.subplots()
+            sns.histplot(df["GPA"], bins=10, kde=True, color="skyblue", ax=ax1)
+            st.pyplot(fig1)
 
-    # Clean GPA
-    df["GPA"] = pd.to_numeric(df["GPA"], errors="coerce")
-    df = df.dropna(subset=["GPA"])
+            st.write("#### How many plan to study abroad?")
+            fig2, ax2 = plt.subplots()
+            sns.countplot(x="Goal Abroad", data=df, palette="Set2", ax=ax2)
+            st.pyplot(fig2)
 
-    st.write("#### GPA Distribution")
-
-    if df["GPA"].nunique() > 1:
-        fig1, ax1 = plt.subplots()
-        sns.histplot(df["GPA"], bins=10, kde=True, color="skyblue", ax=ax1)
-        st.pyplot(fig1)
-    else:
-        fig1, ax1 = plt.subplots()
-        ax1.bar(df["GPA"].unique(), df["GPA"].value_counts(), color="skyblue", edgecolor="black")
-        ax1.set_xlabel("GPA")
-        ax1.set_ylabel("Count")
-        ax1.set_title("GPA Distribution")
-        st.pyplot(fig1)
-
-    st.write("#### How many plan to study abroad?")
-    fig2, ax2 = plt.subplots()
-    sns.countplot(x="Goal Abroad", data=df, palette="Set2", ax=ax2)
-    st.pyplot(fig2)
-
-    st.write("#### Most Common Risk Factors")
-    all_risks = []
-    for risks in df["Risk Factors"].dropna():
-        if isinstance(risks, str) and risks.strip():
-            all_risks.extend(risks.split(", "))
-    if all_risks:
-        risk_counts = pd.Series(all_risks).value_counts()
-        st.bar_chart(risk_counts.head(5))
-    else:
-        st.info("No risk factors data available yet.")
+            st.write("#### Most Common Risk Factors")
+            all_risks = []
+            for risks in df["Risk Factors"].dropna():
+                if isinstance(risks, str) and risks.strip():
+                    all_risks.extend(risks.split(", "))
+            if all_risks:
+                risk_counts = pd.Series(all_risks).value_counts()
+                st.bar_chart(risk_counts.head(5))
+            else:
+                st.info("No risk factors recorded yet.")
