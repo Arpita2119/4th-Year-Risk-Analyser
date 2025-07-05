@@ -7,9 +7,8 @@ import seaborn as sns
 import os
 import csv
 from fpdf import FPDF
-from io import BytesIO
 
-# Streamlit page config
+# Configure Streamlit page
 st.set_page_config(page_title="4th Year Risk Analyser", page_icon="🎓")
 
 # Sidebar Navigation
@@ -185,7 +184,6 @@ if menu == "4th Year Analyzer":
         # Convert PDF to bytes
         pdf_bytes = pdf.output(dest="S").encode("latin1")
 
-        # Download button
         st.download_button(
             "📅 Download PDF Report",
             data=pdf_bytes,
@@ -193,11 +191,12 @@ if menu == "4th Year Analyzer":
             mime="application/pdf"
         )
 
-
 elif menu == "View Data Analytics":
     st.title("📊 Data Analytics Dashboard")
 
-    if os.path.exists("user_responses.csv"):
+    file_exists = os.path.exists("user_responses.csv")
+
+    if file_exists:
         try:
             df = pd.read_csv(
                 "user_responses.csv",
@@ -208,44 +207,59 @@ elif menu == "View Data Analytics":
         except pd.errors.ParserError as e:
             st.error(f"CSV parsing error: {e}")
             df = pd.DataFrame()
-
-        if not df.empty:
-            # Clean GPA column
-            df["GPA"] = pd.to_numeric(df["GPA"], errors="coerce")
-            df = df.dropna(subset=["GPA"])
-
-            st.write("#### GPA Distribution")
-            if df["GPA"].nunique() > 1:
-                fig1, ax1 = plt.subplots()
-                sns.histplot(df["GPA"], bins=10, kde=True, color="skyblue", ax=ax1)
-                st.pyplot(fig1)
-            else:
-                fig1, ax1 = plt.subplots()
-                ax1.bar(df["GPA"].unique(), df["GPA"].value_counts(), color="skyblue", edgecolor="black")
-                ax1.set_xlabel("GPA")
-                ax1.set_ylabel("Count")
-                ax1.set_title("GPA Distribution")
-                st.pyplot(fig1)
-
-            if df.shape[0] < 3:
-                st.info("⚠️ Not enough data yet. Complete a few more analyses to see proper insights.")
-
-            st.write("#### How many plan to study abroad?")
-            fig2, ax2 = plt.subplots()
-            sns.countplot(x="Goal Abroad", data=df, palette="Set2", ax=ax2)
-            st.pyplot(fig2)
-
-            st.write("#### Most Common Risk Factors")
-            all_risks = []
-            for risks in df["Risk Factors"].dropna():
-                if isinstance(risks, str) and risks.strip():
-                    all_risks.extend(risks.split(", "))
-            if all_risks:
-                risk_counts = pd.Series(all_risks).value_counts()
-                st.bar_chart(risk_counts.head(5))
-            else:
-                st.info("No risk factors data available yet.")
-        else:
-            st.info("No valid data found.")
     else:
-        st.warning("No data saved yet. Complete some analyses first!")
+        df = pd.DataFrame()
+
+    # Load sample data if no real data exists
+    if df.empty or len(df) < 3:
+        st.warning("⚠️ Not enough data yet. Showing sample data for demonstration!")
+        df = pd.DataFrame({
+            "GPA": [2.0, 3.5, 4.0, 4.8, 5.5, 6.3, 7.5, 8.2, 8.5, 9.0],
+            "Goal Abroad": ["Yes", "No", "No", "Yes", "No", "No", "Yes", "Yes", "No", "Yes"],
+            "Risk Factors": [
+                "Financial instability",
+                "No internship experience yet so an extra year could help",
+                "",
+                "Already have a strong job offer from 3rd year placements",
+                "",
+                "",
+                "Feeling burnt out or uninterested in continuing academics",
+                "",
+                "",
+                ""
+            ]
+        })
+
+    # Clean GPA
+    df["GPA"] = pd.to_numeric(df["GPA"], errors="coerce")
+    df = df.dropna(subset=["GPA"])
+
+    st.write("#### GPA Distribution")
+
+    if df["GPA"].nunique() > 1:
+        fig1, ax1 = plt.subplots()
+        sns.histplot(df["GPA"], bins=10, kde=True, color="skyblue", ax=ax1)
+        st.pyplot(fig1)
+    else:
+        fig1, ax1 = plt.subplots()
+        ax1.bar(df["GPA"].unique(), df["GPA"].value_counts(), color="skyblue", edgecolor="black")
+        ax1.set_xlabel("GPA")
+        ax1.set_ylabel("Count")
+        ax1.set_title("GPA Distribution")
+        st.pyplot(fig1)
+
+    st.write("#### How many plan to study abroad?")
+    fig2, ax2 = plt.subplots()
+    sns.countplot(x="Goal Abroad", data=df, palette="Set2", ax=ax2)
+    st.pyplot(fig2)
+
+    st.write("#### Most Common Risk Factors")
+    all_risks = []
+    for risks in df["Risk Factors"].dropna():
+        if isinstance(risks, str) and risks.strip():
+            all_risks.extend(risks.split(", "))
+    if all_risks:
+        risk_counts = pd.Series(all_risks).value_counts()
+        st.bar_chart(risk_counts.head(5))
+    else:
+        st.info("No risk factors data available yet.")
