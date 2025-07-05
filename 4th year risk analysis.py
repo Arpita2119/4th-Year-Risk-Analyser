@@ -162,7 +162,6 @@ if menu == "4th Year Analyzer":
         else:
             st.success("✅ Your responses have been saved successfully!")
 
-        
         # PDF Report
         pdf = FPDF()
         pdf.add_page()
@@ -211,17 +210,25 @@ elif menu == "View Data Analytics":
             df = pd.DataFrame()
 
         if not df.empty:
-            # Convert GPA safely
+            # Clean GPA column
             df["GPA"] = pd.to_numeric(df["GPA"], errors="coerce")
             df = df.dropna(subset=["GPA"])
 
-            #st.write("### Raw Data Collected")
-            #st.dataframe(df)
-
             st.write("#### GPA Distribution")
-            fig1, ax1 = plt.subplots()
-            sns.histplot(df["GPA"], bins=10, kde=True, color="skyblue", ax=ax1)
-            st.pyplot(fig1)
+            if df["GPA"].nunique() > 1:
+                fig1, ax1 = plt.subplots()
+                sns.histplot(df["GPA"], bins=10, kde=True, color="skyblue", ax=ax1)
+                st.pyplot(fig1)
+            else:
+                fig1, ax1 = plt.subplots()
+                ax1.bar(df["GPA"].unique(), df["GPA"].value_counts(), color="skyblue", edgecolor="black")
+                ax1.set_xlabel("GPA")
+                ax1.set_ylabel("Count")
+                ax1.set_title("GPA Distribution")
+                st.pyplot(fig1)
+
+            if df.shape[0] < 3:
+                st.info("⚠️ Not enough data yet. Complete a few more analyses to see proper insights.")
 
             st.write("#### How many plan to study abroad?")
             fig2, ax2 = plt.subplots()
